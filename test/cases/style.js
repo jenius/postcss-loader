@@ -1,3 +1,3 @@
 module.exports = {
-    a: { color: 'black' }
-};
+  a: { color: 'black' }
+}

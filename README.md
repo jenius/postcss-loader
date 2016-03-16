@@ -6,10 +6,6 @@
 
 [PostCSS] loader for [webpack] to postprocesses your CSS with [PostCSS plugins].
 
-<a href="https://evilmartians.com/?utm_source=postcss-loader">
-<img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg" alt="Sponsored by Evil Martians" width="236" height="54">
-</a>
-
 [PostCSS plugins]: https://github.com/postcss/postcss#plugins
 [PostCSS]:         https://github.com/postcss/postcss
 [webpack]:         http://webpack.github.io/
@@ -25,19 +21,16 @@ var autoprefixer = require('autoprefixer');
 var precss       = require('precss');
 
 module.exports = {
-    module: {
-        loaders: [
-            {
-                test:   /\.css$/,
-                loader: "style-loader!css-loader!postcss-loader"
-            }
-        ]
-    },
-    postcss: function () {
-        return [autoprefixer, precss];
-    }
+  module: {
+    loaders: [
+      { test:   /\.css$/, loader: "style-loader!css-loader!postcss-loader" }
+    ]
+  },
+  postcss: { plugins: [autoprefixer, precss] }
 }
 ```
+
+This must be an object, or a function that returns an object. You can use the `plugins`, `syntax`, `parser`, and/or `stringifier` keys in this pbject to contain your options for postcss.
 
 Now your CSS files requirements will be processed by selected PostCSS plugins:
 
@@ -51,9 +44,9 @@ Note that the context of this function
 ```js
 module.exports = {
     ...
-    postcss: function () {
-        return [autoprefixer, precss];
-    }
+  postcss: function () {
+    return { plugins: [autoprefixer, precss] }
+  }
 }
 ```
 
@@ -61,34 +54,6 @@ will be set to the [webpack loader-context].
 If there is the need, this will let you access to webpack loaders API.
 
 [webpack loader-context]: http://webpack.github.io/docs/loaders.html#loader-context
-
-## Plugins Packs
-
-If you want to process different styles by different PostCSS plugins you can
-define plugin packs in `postcss` section and use them by `?pack=name` parameter.
-
-```js
-module.exports = {
-    module: {
-        loaders: [
-            {
-                test:   /\.docs\.css$/,
-                loader: "style-loader!css-loader!postcss-loader?pack=cleaner"
-            },
-            {
-                test:   /\.css$/,
-                loader: "style-loader!css-loader!postcss-loader"
-            }
-        ]
-    },
-    postcss: function () {
-        return {
-            defaults: [autoprefixer, precss],
-            cleaner:  [autoprefixer({ browsers: [] })]
-        };
-    }
-}
-```
 
 ## Integration with postcss-import
 
@@ -102,21 +67,14 @@ Here is a simple way to let know postcss-import to pass files to webpack:
 var postcssImport = require('postcss-import');
 
 module.exports = {
-    module: {
-        loaders: [
-            {
-                test:   /\.css$/,
-                loader: "style-loader!css-loader!postcss-loader"
-            }
-        ]
-    },
-    postcss: function (webpack) {
-        return [
-            postcssImport({
-                addDependencyTo: webpack
-            })
-        ];
-    }
+  module: {
+    loaders: [
+      { test:   /\.css$/, loader: "style-loader!css-loader!postcss-loader" }
+    ]
+  },
+  postcss: function (webpack) {
+    return [postcssImport({ addDependencyTo: webpack }) ]
+  }
 }
 ```
 
@@ -131,8 +89,8 @@ either add the css-loader’s [`importLoaders` option]:
 
 ```js
 {
-    test:   /\.css$/,
-    loader: "style-loader!css-loader?modules&importLoaders=1!postcss-loader"
+  test:   /\.css$/,
+  loader: "style-loader!css-loader?modules&importLoaders=1!postcss-loader"
 }
 ```
 
@@ -142,81 +100,3 @@ or replace `css-loader` with [postcss-modules] plugin.
 [postcss-modules]:        https://github.com/outpunk/postcss-modules
 [cannot be used]:         https://github.com/webpack/css-loader/issues/137
 [CSS Modules]:            https://github.com/webpack/css-loader#css-modules
-
-## JS Styles
-
-If you want to process styles written in JavaScript
-you can use the [postcss-js] parser.
-
-```js
-{
-    test:   /\.style.js$/,
-    loader: "style-loader!css-loader!postcss-loader?parser=postcss-js"
-}
-```
-
-Or use can use even ES6 in JS styles by Babel:
-
-```js
-{
-    test:   /\.style.js$/,
-    loader: "style-loader!css-loader!postcss-loader?parser=postcss-js!babel"
-}
-```
-
-As result you will be able to write styles as:
-
-```js
-import colors from '../config/colors';
-
-export default {
-    '.menu': {
-        color: colors.main,
-        height: 25,
-        '&_link': {
-            color: 'white'
-        }
-    }
-}
-```
-
-[postcss-js]: https://github.com/postcss/postcss-js
-
-## Custom Syntaxes
-
-PostCSS can transforms styles in any syntax, not only in CSS.
-There are 3 parameters to control syntax:
-
-* `syntax` accepts module name with `parse` and `stringify` function.
-* `parser` accepts module name with input parser function.
-* `stringifier` accepts module name with output stringifier function.
-
-For example, you can use [Safe Parser] to find and fix any CSS errors:
-
-```js
-var css = require('postcss?parser=postcss-safe-parser!./broken')
-```
-
-[Safe Parser]: https://github.com/postcss/postcss-safe-parser
-
-If you need to pass the function directly instead of a module name, you can do so through the webpack postcss option, as such:
-
-```js
-var sugarss = require('sugarss')
-module.exports = {
-    module: {
-        loaders: [
-            {
-                test:   /\.css$/,
-                loader: "style-loader!css-loader!postcss-loader"
-            }
-        ]
-    },
-    postcss: function () {
-        return {
-            plugins: [autoprefixer, precss],
-            syntax: sugarss
-        };
-    }
-}
-```

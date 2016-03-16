@@ -1,71 +1,40 @@
-var loaderUtils = require('loader-utils');
-var postcss     = require('postcss');
+var postcss = require('postcss')
+var assign = require('lodash.assign')
 
 module.exports = function (source, map) {
-    if ( this.cacheable ) this.cacheable();
+  if (this.cacheable) this.cacheable()
 
-    var file   = this.resourcePath;
-    var params = loaderUtils.parseQuery(this.query);
+  var f = this.resourcePath
+  var defaults = { from: f, to: f, map: { inline: false, annotation: false } }
+  var options = this.options.postcss
 
-    var opts = {
-        from: file,
-        to:   file,
-        map:  {
-            inline:     false,
-            annotation: false
-        }
-    };
+  // options can be an object or a function that returns an object
+  if (typeof options === 'function') { options = options.call(this, this) }
+  options = assign(defaults, options)
 
-    if ( typeof map === 'string' ) map = JSON.parse(map);
-    if ( map && map.mappings ) opts.map.prev = map;
+  if (typeof map === 'string') { map = JSON.parse(map) }
+  if (map && map.mappings) { defaults.map.prev = map }
 
-    var plugins;
-    var options = this.options.postcss;
-    if ( typeof options === 'function' ) {
-        options = options.call(this, this);
-    }
+  var loader = this
+  var callback = this.async()
 
-    if ( typeof options === 'undefined' ) {
-        plugins = [];
-    } else if ( params.pack ) {
-        plugins = options[params.pack];
-    } else if ( !Array.isArray(options) ) {
-        plugins = options.plugins || options.defaults;
-        opts.syntax = options.syntax;
-        opts.parser = options.parser;
-        opts.stringifier = options.stringifier;
-    }
+  if (options.parser === 'postcss-js') {
+    source = this.exec(source, this.resource)
+  }
 
-    if ( params.syntax && !opts.syntax ) {
-        opts.syntax = require(params.syntax);
-    }
-    if ( params.parser && !opts.parser ) {
-        opts.parser = require(params.parser);
-    }
-    if ( params.stringifier && !opts.stringifier ) {
-        opts.stringifier = require(params.stringifier);
-    }
-
-    var loader   = this;
-    var callback = this.async();
-
-    if ( params.parser === 'postcss-js' ) {
-        source = this.exec(source, this.resource);
-    }
-
-    postcss(plugins).process(source, opts)
-        .then(function (result) {
-            result.warnings().forEach(function (msg) {
-                loader.emitWarning(msg.toString());
-            });
-            callback(null, result.css, result.map ? result.map.toJSON() : null);
-        })
-        .catch(function (error) {
-            if ( error.name === 'CssSyntaxError' ) {
-                loader.emitError(error.message + error.showSourceCode());
-                callback();
-            } else {
-                callback(error);
-            }
-        });
-};
+  postcss(options.plugins).process(source, options)
+    .then(function (result) {
+      result.warnings().forEach(function (msg) {
+        loader.emitWarning(msg.toString())
+      })
+      callback(null, result.css, result.map ? result.map.toJSON() : null)
+    })
+    .catch(function (error) {
+      if (error.name === 'CssSyntaxError') {
+        loader.emitError(error.message + error.showSourceCode())
+        callback()
+      } else {
+        callback(error)
+      }
+    })
+}
